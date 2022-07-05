@@ -1,281 +1,438 @@
-#!/bin/bash
-
-set -e
+# exit if command failed.
+set -o errexit
+# exit if pipe failed.
 set -o pipefail
+# exit if variable not set.
+set -o nounset
 
-sudo apt update -y
-sudo apt install gcc g++ mingw-w64 make m4 texinfo zip -y
+# sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 
-TOOLCHAIN_NAME="gcc-v850-elf"
-TOOLCHAIN_PATH="/tmp/opt/${TOOLCHAIN_NAME}-linux"
+apt update -y
+apt install build-essential mingw-w64 wget texinfo bison zip -y
 
-BUILD="x86_64-linux-gnu"
-HOST="x86_64-linux-gnu"
-TARGET_ARCH="v850-elf"
-
-NUMJOBS="-j$(nproc)"
-export PATH=$PATH:${TOOLCHAIN_PATH}/bin
-
-DOWNLOAD_PATH="/tmp/download"
-SOURCES_PATH="/tmp/sources"
-BUILD_PATH="/tmp/build_linux"
-
-# prepare install path
-rm -rf ${TOOLCHAIN_PATH}
-mkdir -p ${TOOLCHAIN_PATH}
-
-# prepare temporary build folders
-rm -rf ${SOURCES_PATH}
-rm -rf ${BUILD_PATH}
-
-mkdir -p ${SOURCES_PATH}
-mkdir -p ${BUILD_PATH}
-
-# software versions
 BINUTILS_VERSION="2.34"
 GCC_VERSION="9.3.0"
-GMP_VERSION="6.2.0"
-MPC_VERSION="1.1.0"
-MPFR_VERSION="4.0.2"
-GDB_VERSION="9.1"
 NEWLIB_VERSION="3.3.0"
 
-# download sources
-wget -c -P ${DOWNLOAD_PATH} https://mirrors.aliyun.com/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.gz
-wget -c -P ${DOWNLOAD_PATH} https://mirrors.aliyun.com/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz
-wget -c -P ${DOWNLOAD_PATH} https://mirrors.aliyun.com/gnu/gmp/gmp-${GMP_VERSION}.tar.bz2
-wget -c -P ${DOWNLOAD_PATH} https://mirrors.aliyun.com/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
-wget -c -P ${DOWNLOAD_PATH} https://mirrors.aliyun.com/gnu/mpfr/mpfr-${MPFR_VERSION}.tar.gz
-# wget -c -P ${DOWNLOAD_PATH} https://mirrors.aliyun.com/gnu/gdb/gdb-${GDB_VERSION}.tar.gz
-wget -c -P ${DOWNLOAD_PATH} ftp://sourceware.org/pub/newlib/newlib-${NEWLIB_VERSION}.tar.gz
+BUILD="x86_64-linux-gnu"
+LINUX_HOST="x86_64-linux-gnu"
+WINDOWS_HOST="x86_64-w64-mingw32"
+TARGET="v850-elf"
+BASE_PATH="/tmp/work"
 
-for f in $(find ${DOWNLOAD_PATH} -name *.tar.gz)
-do
-    tar zxvf "$f" -C ${SOURCES_PATH}
-done
+SOURCE_PATH="${BASE_PATH}/source"
+BUILD_LINUX_PATH="${BASE_PATH}/build/linux"
+BUILD_WINDOWS_PATH="${BASE_PATH}/build/win32"
+INSTALL_LINUX_PATH="${BASE_PATH}/install/v850-elf-gcc-linux-x64"
+INSTALL_WINDOWS_PATH="${BASE_PATH}/install/v850-elf-gcc-win32-x64"
+STAGE_PATH="${BASE_PATH}/stage"
+PATH=$PATH:${INSTALL_LINUX_PATH}/bin
 
-for f in $(find ${DOWNLOAD_PATH} -name *.tar.bz2)
-do
-    tar jxvf "$f" -C ${SOURCES_PATH}
-done
+mkdir -p ${SOURCE_PATH}
+mkdir -p ${BUILD_LINUX_PATH}
+mkdir -p ${BUILD_WINDOWS_PATH}
+mkdir -p ${INSTALL_LINUX_PATH}
+mkdir -p ${INSTALL_WINDOWS_PATH}
+mkdir -p ${STAGE_PATH}
 
-(cd ${SOURCES_PATH}/gcc-${GCC_VERSION}/ && ln -sf ../gmp-${GMP_VERSION} gmp)
-(cd ${SOURCES_PATH}/gcc-${GCC_VERSION}/ && ln -sf ../mpc-${MPC_VERSION} mpc)
-(cd ${SOURCES_PATH}/gcc-${GCC_VERSION}/ && ln -sf ../mpfr-${MPFR_VERSION} mpfr)
+# download tarballs
+if [ ! -e ${STAGE_PATH}/download_binutils ]
+then
+    wget -c -P ${SOURCE_PATH} http://ftpmirror.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.gz
+    touch ${STAGE_PATH}/download_binutils
+fi
 
-# build binutils
-mkdir -p ${BUILD_PATH}/binutils
-cd ${BUILD_PATH}/binutils
+if [ ! -e ${STAGE_PATH}/download_gcc ]
+then
+    wget -c -P ${SOURCE_PATH} http://ftpmirror.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz
+    touch ${STAGE_PATH}/download_gcc
+fi
 
-${SOURCES_PATH}/binutils-${BINUTILS_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --disable-nls \
-    2>&1 | tee configure.out
+if [ ! -e ${STAGE_PATH}/download_newlib ]
+then
+    wget -c -P ${SOURCE_PATH} ftp://sourceware.org/pub/newlib/newlib-${NEWLIB_VERSION}.tar.gz
+    touch ${STAGE_PATH}/download_newlib
+fi
 
-make -w ${NUMJOBS} 2>&1 | tee make.out
-make -w install-strip 2>&1 | tee make_install.out
+# extract tarballs
+if [ ! -e ${STAGE_PATH}/extract_binutils ]
+then
+    tar -xvf ${SOURCE_PATH}/binutils-${BINUTILS_VERSION}.tar.gz -C ${SOURCE_PATH}
+    touch ${STAGE_PATH}/extract_binutils
+fi
 
-# build gcc - 1st pass
-mkdir -p ${BUILD_PATH}/gcc_1st
-cd ${BUILD_PATH}/gcc_1st
+if [ ! -e ${STAGE_PATH}/extract_gcc ]
+then
+    tar -xvf ${SOURCE_PATH}/gcc-${GCC_VERSION}.tar.gz -C ${SOURCE_PATH}
+    touch ${STAGE_PATH}/extract_gcc
+fi
 
-${SOURCES_PATH}/gcc-${GCC_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --enable-languages=c \
-    --without-headers \
-    --with-gnu-as \
-    --with-gnu-ld \
-    --with-newlib \
-    --disable-libssp \
-    --disable-threads \
-    --disable-shared \
-    --disable-nls \
-    2>&1 | tee configure.out
+if [ ! -e ${STAGE_PATH}/extract_newlib ]
+then
+    tar -xvf ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}.tar.gz -C ${SOURCE_PATH}
+    touch ${STAGE_PATH}/extract_newlib
+fi
 
-make -w ${NUMJOBS} all-gcc 2>&1 | tee make.out
-make -w install-strip-gcc 2>&1 | tee make_install.out
+# download gcc prerequisites
+cd ${SOURCE_PATH}/gcc-${GCC_VERSION}
+./contrib/download_prerequisites
 
-# build newlib
-mkdir -p ${BUILD_PATH}/newlib
-cd ${BUILD_PATH}/newlib
+# do patches
+EXIT_C='
+#include <_ansi.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "sys/syscall.h"
 
-${SOURCES_PATH}/newlib-${NEWLIB_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --disable-nls \
-    2>&1 | tee configure.out
+extern int errno;
 
-make -w ${NUMJOBS} TARGET_CFLAGS="-gdwarf-2" 2>&1 | tee make.out
-make -w install 2>&1 | tee make_install.out
+int __trap0 (int function, int p1, int p2, int p3);
 
-# build gcc - 2nd pass
-mkdir -p ${BUILD_PATH}/gcc_2nd
-cd ${BUILD_PATH}/gcc_2nd
+#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
 
-${SOURCES_PATH}/gcc-${GCC_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --enable-languages=c,c++ \
-    --with-headers \
-    --with-gnu-as \
-    --with-gnu-ld \
-    --with-newlib \
-    --disable-libssp \
-    --disable-threads \
-    --disable-shared \
-    --disable-nls \
-    2>&1 | tee configure.out
-
-make -w ${NUMJOBS} 2>&1 | tee make.out
-make -w install-strip 2>&1 | tee make_install.out
-
-# run test compilation - C
-echo "
-int main() {
-    int a = 0;
-    return 0;
+void _exit (int n)
+{
+  TRAP0 (SYS_exit, n, 0, 0);
+  for(;;);
 }
-" > ${BUILD_PATH}/rh850_test.c
-${TARGET_ARCH}-gcc -mv850e3v5 -mloop -mrh850-abi ${BUILD_PATH}/rh850_test.c -o ${BUILD_PATH}/rh850_test_c.elf
-${TARGET_ARCH}-size --format=berkeley ${BUILD_PATH}/rh850_test_c.elf
+'
 
-# run test compilation - C++
-echo "
-#include <vector>
-#include <array>
-auto get_value() { return 0.0; }
-int main() {
-    std::vector<int> test_vec;
-    std::array<int, 5> test_array{ {3, 4, 5, 1, 2} };
-    for(auto i: test_array)
-        test_vec.push_back(i);
-    double value = get_value();
-    return 0;
+GET_PID_C='
+#include <_ansi.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "sys/syscall.h"
+
+extern int errno;
+
+int __trap0 (int function, int p1, int p2, int p3);
+
+#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+
+int
+_getpid (int n)
+{
+  return 1;
 }
-" > ${BUILD_PATH}/rh850_test.cpp
-${TARGET_ARCH}-g++ -mv850e3v5 -mloop -mrh850-abi --std=c++14 ${BUILD_PATH}/rh850_test.cpp -o ${BUILD_PATH}/rh850_test_cpp.elf
-${TARGET_ARCH}-size --format=berkeley ${BUILD_PATH}/rh850_test_cpp.elf
+'
 
-# build for win
+ISATTY_C='
+#include <_ansi.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "sys/syscall.h"
 
-TOOLCHAIN_PATH="/tmp/opt/${TOOLCHAIN_NAME}-windows"
-HOST="x86_64-w64-mingw32"
-# HOST="i686-w64-mingw32"
+extern int errno;
 
-BUILD_PATH="/tmp/build_mingw32"
+int __trap0 (int function, int p1, int p2, int p3);
 
-# prepare install path
-rm -rf ${TOOLCHAIN_PATH}
-mkdir -p ${TOOLCHAIN_PATH}
+#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
 
-# prepare temporary build folders
-rm -rf ${SOURCES_PATH}
-rm -rf ${BUILD_PATH}
+int
+_isatty (int fd)
+{
+  return 1;
+}
+'
 
-mkdir -p ${SOURCES_PATH}
-mkdir -p ${BUILD_PATH}
+KILL_C='
+#include <_ansi.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "sys/syscall.h"
+#include <reent.h>
 
-for f in $(find ${DOWNLOAD_PATH} -name *.tar.gz)
+extern int errno;
+
+int __trap0 (int function, int p1, int p2, int p3);
+
+#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+
+int
+_kill (pid_t pid,
+       int sig)
+{
+  return TRAP0 (SYS_exit, 0xdead0000 | sig, 0, 0);
+}
+'
+
+READ_C='
+#include <_ansi.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "sys/syscall.h"
+
+extern int errno;
+
+int __trap0 (int function, int p1, int p2, int p3);
+
+#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+
+int
+_read (int file,
+       char *ptr,
+       int len)
+{
+  return TRAP0 (SYS_read, file, ptr, len);
+}
+'
+
+SBRK_C='
+#include <_ansi.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "sys/syscall.h"
+
+extern char heap_start;  /* Defined by the linker script. */
+extern char end;         /* Defined by the linker script. */
+
+#if 0
+#define HEAP_START ((char *)&heap_start)
+#else
+#define HEAP_START ((char *)&end)
+#endif
+
+static char *heap_ptr = NULL;
+
+void *
+_sbrk (int nbytes)
+{
+  char *base;
+
+  if (heap_ptr == NULL) {
+    heap_ptr = HEAP_START;
+  }
+  base = heap_ptr;
+
+  heap_ptr += nbytes;
+
+  return base;
+}
+'
+
+echo "${EXIT_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/_exit.c
+# echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/get_pid.c
+echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/getpid.c
+echo "${ISATTY_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/isatty.c
+echo "${KILL_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/kill.c
+echo "${READ_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/read.c
+echo "${SBRK_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/sbrk.c
+
+echo "${EXIT_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/_exit.c
+# echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/get_pid.c
+echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/getpid.c
+echo "${ISATTY_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/isatty.c
+echo "${KILL_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/kill.c
+echo "${READ_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/read.c
+echo "${SBRK_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/sbrk.c
+
+for f in `ls ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/*.c`
 do
-    tar zxvf "$f" -C ${SOURCES_PATH}
+    sed -i "s/^int errno;/extern int errno;/g" $f
 done
 
-for f in $(find ${DOWNLOAD_PATH} -name *.tar.bz2)
+for f in `ls ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/*.c`
 do
-    tar jxvf "$f" -C ${SOURCES_PATH}
+    sed -i "s/^int errno;/extern int errno;/g" $f
 done
 
-(cd ${SOURCES_PATH}/gcc-${GCC_VERSION}/ && ln -sf ../gmp-${GMP_VERSION} gmp)
-(cd ${SOURCES_PATH}/gcc-${GCC_VERSION}/ && ln -sf ../mpc-${MPC_VERSION} mpc)
-(cd ${SOURCES_PATH}/gcc-${GCC_VERSION}/ && ln -sf ../mpfr-${MPFR_VERSION} mpfr)
+# build linux toolchain
+if [ ! -e ${STAGE_PATH}/build_linux_binutils ]
+then
+    mkdir -p ${BUILD_LINUX_PATH}/binutils
+    cd ${BUILD_LINUX_PATH}/binutils
 
-# build binutils
-mkdir -p ${BUILD_PATH}/binutils
-cd ${BUILD_PATH}/binutils
+    ${SOURCE_PATH}/binutils-${BINUTILS_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${LINUX_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_LINUX_PATH} \
+        --disable-nls
 
-${SOURCES_PATH}/binutils-${BINUTILS_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --disable-nls \
-    2>&1 | tee configure.out
+    make
+    make install-strip
 
-make -w ${NUMJOBS} 2>&1 | tee make.out
-make -w install-strip 2>&1 | tee make_install.out
+    touch ${STAGE_PATH}/build_linux_binutils
+fi
 
-# build gcc - 1st pass
-mkdir -p ${BUILD_PATH}/gcc_1st
-cd ${BUILD_PATH}/gcc_1st
+if [ ! -e ${STAGE_PATH}/build_linux_gcc_1st ]
+then
+    mkdir -p ${BUILD_LINUX_PATH}/gcc_1st
+    cd ${BUILD_LINUX_PATH}/gcc_1st
 
-${SOURCES_PATH}/gcc-${GCC_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --enable-languages=c \
-    --without-headers \
-    --with-gnu-as \
-    --with-gnu-ld \
-    --with-newlib \
-    --disable-libssp \
-    --disable-threads \
-    --disable-shared \
-    --disable-nls \
-    2>&1 | tee configure.out
+    ${SOURCE_PATH}/gcc-${GCC_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${LINUX_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_LINUX_PATH} \
+        --enable-languages=c \
+        --without-headers \
+        --with-newlib  \
+        --with-gnu-as \
+        --with-gnu-ld \
+        --disable-threads \
+        --disable-libssp \
+        --disable-shared \
+        --disable-nls
 
-make -w ${NUMJOBS} all-gcc 2>&1 | tee make.out
-make -w install-strip-gcc 2>&1 | tee make_install.out
+    make all-gcc
+    make install-strip-gcc
 
-# build newlib
-mkdir -p ${BUILD_PATH}/newlib
-cd ${BUILD_PATH}/newlib
+    touch ${STAGE_PATH}/build_linux_gcc_1st
+fi
 
-${SOURCES_PATH}/newlib-${NEWLIB_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --disable-nls \
-    2>&1 | tee configure.out
+if [ ! -e ${STAGE_PATH}/build_linux_newlib ]
+then
+    mkdir -p ${BUILD_LINUX_PATH}/newlib
+    cd ${BUILD_LINUX_PATH}/newlib
 
-make -w ${NUMJOBS} TARGET_CFLAGS="-gdwarf-2" 2>&1 | tee make.out
-make -w install 2>&1 | tee make_install.out
+    ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${LINUX_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_LINUX_PATH} \
+        --enable-newlib-nano-malloc \
+        --enable-newlib-nano-formatted-io \
+        --enable-newlib-reent-small \
+        --disable-nls
 
-# build gcc - 2nd pass
-mkdir -p ${BUILD_PATH}/gcc_2nd
-cd ${BUILD_PATH}/gcc_2nd
+    # do not use GP based addressing
 
-${SOURCES_PATH}/gcc-${GCC_VERSION}/configure \
-    --build=${BUILD} \
-    --host=${HOST} \
-    --target=${TARGET_ARCH} \
-    --prefix=${TOOLCHAIN_PATH} \
-    --enable-languages=c,c++ \
-    --with-headers \
-    --with-gnu-as \
-    --with-gnu-ld \
-    --with-newlib \
-    --disable-libssp \
-    --disable-threads \
-    --disable-shared \
-    --disable-nls \
-    2>&1 | tee configure.out
+    #if defined(__v850) && !defined(__rtems__)
+    #define __ATTRIBUTE_IMPURE_PTR__ __attribute__((__sda__))
+    #endif
 
-make -w ${NUMJOBS} 2>&1 | tee make.out
-make -w install-strip 2>&1 | tee make_install.out
+    make CFLAGS_FOR_TARGET="-gdwarf-2 -fdata-sections -ffunction-sections -g -Os -D__rtems__"
+    make install
+
+    touch ${STAGE_PATH}/build_linux_newlib
+fi
+
+if [ ! -e ${STAGE_PATH}/build_linux_gcc_2nd ]
+then
+    mkdir -p ${BUILD_LINUX_PATH}/gcc_2nd
+    cd ${BUILD_LINUX_PATH}/gcc_2nd
+
+    ${SOURCE_PATH}/gcc-${GCC_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${LINUX_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_LINUX_PATH} \
+        --enable-languages=c,c++ \
+        --with-headers \
+        --with-newlib  \
+        --with-gnu-as \
+        --with-gnu-ld \
+        --disable-threads \
+        --disable-libssp \
+        --disable-shared \
+        --disable-nls
+
+    make
+    make install-strip
+
+    touch ${STAGE_PATH}/build_linux_gcc_2nd
+fi
+
+# build win32 toolchain
+if [ ! -e ${STAGE_PATH}/build_win32_binutils ]
+then
+    mkdir -p ${BUILD_WINDOWS_PATH}/binutils
+    cd ${BUILD_WINDOWS_PATH}/binutils
+
+    ${SOURCE_PATH}/binutils-${BINUTILS_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${WINDOWS_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_WINDOWS_PATH} \
+        --disable-nls
+
+    make
+    make install-strip
+
+    touch ${STAGE_PATH}/build_win32_binutils
+fi
+
+if [ ! -e ${STAGE_PATH}/build_win32_gcc_1st ]
+then
+    mkdir -p ${BUILD_WINDOWS_PATH}/gcc_1st
+    cd ${BUILD_WINDOWS_PATH}/gcc_1st
+
+    ${SOURCE_PATH}/gcc-${GCC_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${WINDOWS_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_WINDOWS_PATH} \
+        --enable-languages=c \
+        --without-headers \
+        --with-newlib  \
+        --with-gnu-as \
+        --with-gnu-ld \
+        --disable-threads \
+        --disable-libssp \
+        --disable-shared \
+        --disable-nls
+
+    make all-gcc
+    make install-strip-gcc
+
+    touch ${STAGE_PATH}/build_win32_gcc_1st
+fi
+
+if [ ! -e ${STAGE_PATH}/build_win32_newlib ]
+then
+    mkdir -p ${BUILD_WINDOWS_PATH}/newlib
+    cd ${BUILD_WINDOWS_PATH}/newlib
+
+    ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${WINDOWS_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_WINDOWS_PATH} \
+        --enable-newlib-nano-malloc \
+        --enable-newlib-nano-formatted-io \
+        --enable-newlib-reent-small \
+        --disable-nls
+
+    # do not use GP based addressing
+
+    #if defined(__v850) && !defined(__rtems__)
+    #define __ATTRIBUTE_IMPURE_PTR__ __attribute__((__sda__))
+    #endif
+
+    make CFLAGS_FOR_TARGET="-gdwarf-2 -fdata-sections -ffunction-sections -g -Os -D__rtems__"
+    make install
+
+    touch ${STAGE_PATH}/build_win32_newlib
+fi
+
+if [ ! -e ${STAGE_PATH}/build_win32_gcc_2nd ]
+then
+    mkdir -p ${BUILD_WINDOWS_PATH}/gcc_2nd
+    cd ${BUILD_WINDOWS_PATH}/gcc_2nd
+
+    ${SOURCE_PATH}/gcc-${GCC_VERSION}/configure \
+        --build=${BUILD} \
+        --host=${WINDOWS_HOST} \
+        --target=${TARGET} \
+        --prefix=${INSTALL_WINDOWS_PATH} \
+        --enable-languages=c,c++ \
+        --with-headers \
+        --with-newlib  \
+        --with-gnu-as \
+        --with-gnu-ld \
+        --disable-threads \
+        --disable-libssp \
+        --disable-shared \
+        --disable-nls
+
+    make
+    make install-strip
+
+    touch ${STAGE_PATH}/build_win32_gcc_2nd
+fi
 
 # zip toolchain
-cd /tmp/opt
-zip -r gcc-v850-elf-linux.zip gcc-v850-elf-linux
-zip -r gcc-v850-elf-windows.zip gcc-v850-elf-windows
+cd ${BASE_PATH}/install
+zip -r v850-elf-gcc-linux-x64.zip v850-elf-gcc-linux-x64
+zip -r v850-elf-gcc-win32-x64.zip v850-elf-gcc-win32-x64

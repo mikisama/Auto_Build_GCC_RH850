@@ -9,7 +9,7 @@ name: Upload Release Asset
 jobs:
   build:
     name: Upload Release Asset
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
 
       - name: Checkout code
@@ -36,8 +36,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: /tmp/opt/gcc-v850-elf-linux.zip
-          asset_name: gcc-v850-elf-linux.zip
+          asset_path: /tmp/work/install/v850-elf-gcc-linux-x64.zip
+          asset_name: v850-elf-gcc-linux-x64.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset Windows
@@ -47,6 +47,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: /tmp/opt/gcc-v850-elf-windows.zip
-          asset_name: gcc-v850-elf-windows.zip
+          asset_path:  /tmp/work/install/v850-elf-gcc-win32-x64.zip
+          asset_name: v850-elf-gcc-win32-x64.zip
           asset_content_type: application/zip
