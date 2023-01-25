@@ -1,0 +1,892 @@
+diff -urN newlib-3.3.0/libgloss/v850/chmod.c.bak newlib-3.3.0/libgloss/v850/chmod.c
+--- newlib-3.3.0/libgloss/v850/chmod.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/chmod.c	2023-01-25 19:59:45.733239000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/chown.c.bak newlib-3.3.0/libgloss/v850/chown.c
+--- newlib-3.3.0/libgloss/v850/chown.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/chown.c	2023-01-25 19:59:45.733239000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/close.c.bak newlib-3.3.0/libgloss/v850/close.c
+--- newlib-3.3.0/libgloss/v850/close.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/close.c	2023-01-25 19:59:45.737239000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/creat.c.bak newlib-3.3.0/libgloss/v850/creat.c
+--- newlib-3.3.0/libgloss/v850/creat.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/creat.c	2023-01-25 19:59:45.737239000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/execv.c.bak newlib-3.3.0/libgloss/v850/execv.c
+--- newlib-3.3.0/libgloss/v850/execv.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/execv.c	2023-01-25 19:59:45.741239000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/execve.c.bak newlib-3.3.0/libgloss/v850/execve.c
+--- newlib-3.3.0/libgloss/v850/execve.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/execve.c	2023-01-25 19:59:45.745238000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/_exit.c.bak newlib-3.3.0/libgloss/v850/_exit.c
+--- newlib-3.3.0/libgloss/v850/_exit.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/_exit.c	2023-01-25 19:59:45.749238000 +0800
+@@ -1,34 +1,18 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-static void _do_dtors()
++void _exit (int n)
+ {
+-  /* The loop variable is static so that if a destructor calls exit, 
+-     and we return here, we simply continue with the next destructor. */
+-  typedef void (*pfunc) ();
+-  extern pfunc __dtors[];
+-  extern pfunc __dtors_end[];
+-  static pfunc *p = __dtors;
+-  
+-  while (p < __dtors_end)
+-    (*p++) ();
+-}
+-
+-
+-void _exit (n)
+-{
+-  /* Destructors should be done earlier because they need to be done before the
+-     files are closed, but here is better than nowhere (and this balances the
+-     constructors done in crt1.c. */
+-  _do_dtors();
+-
+   TRAP0 (SYS_exit, n, 0, 0);
++  for(;;);
+ }
++
+diff -urN newlib-3.3.0/libgloss/v850/fork.c.bak newlib-3.3.0/libgloss/v850/fork.c
+--- newlib-3.3.0/libgloss/v850/fork.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/fork.c	2023-01-25 19:59:45.749238000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/fstat.c.bak newlib-3.3.0/libgloss/v850/fstat.c
+--- newlib-3.3.0/libgloss/v850/fstat.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/fstat.c	2023-01-25 19:59:45.753238000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/getpid.c.bak newlib-3.3.0/libgloss/v850/getpid.c
+--- newlib-3.3.0/libgloss/v850/getpid.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/getpid.c	2023-01-25 19:59:45.757237000 +0800
+@@ -1,15 +1,18 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-_getpid (n)
++int
++_getpid (int n)
+ {
+   return 1;
+ }
++
+diff -urN newlib-3.3.0/libgloss/v850/gettime.c.bak newlib-3.3.0/libgloss/v850/gettime.c
+--- newlib-3.3.0/libgloss/v850/gettime.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/gettime.c	2023-01-25 19:59:45.757237000 +0800
+@@ -4,7 +4,7 @@
+ #include "sys/syscall.h"
+ #include "sys/time.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/isatty.c.bak newlib-3.3.0/libgloss/v850/isatty.c
+--- newlib-3.3.0/libgloss/v850/isatty.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/isatty.c	2023-01-25 19:59:45.757237000 +0800
+@@ -1,16 +1,18 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-_isatty (fd)
+-     int fd;
++int
++_isatty (int fd)
+ {
+   return 1;
+ }
++
+diff -urN newlib-3.3.0/libgloss/v850/kill.c.bak newlib-3.3.0/libgloss/v850/kill.c
+--- newlib-3.3.0/libgloss/v850/kill.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/kill.c	2023-01-25 19:59:45.761237000 +0800
+@@ -1,18 +1,19 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ #include <reent.h>
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-_kill (pid, sig)
+-     pid_t pid;
+-     int sig;
++int
++_kill (pid_t pid,
++       int sig)
+ {
+   return TRAP0 (SYS_exit, 0xdead0000 | sig, 0, 0);
+ }
+diff -urN newlib-3.3.0/libgloss/v850/link.c.bak newlib-3.3.0/libgloss/v850/link.c
+--- newlib-3.3.0/libgloss/v850/link.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/link.c	2023-01-25 19:59:45.765237000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/lseek.c.bak newlib-3.3.0/libgloss/v850/lseek.c
+--- newlib-3.3.0/libgloss/v850/lseek.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/lseek.c	2023-01-25 19:59:45.765237000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/open.c.bak newlib-3.3.0/libgloss/v850/open.c
+--- newlib-3.3.0/libgloss/v850/open.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/open.c	2023-01-25 19:59:45.769236000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/pipe.c.bak newlib-3.3.0/libgloss/v850/pipe.c
+--- newlib-3.3.0/libgloss/v850/pipe.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/pipe.c	2023-01-25 19:59:45.769236000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/read.c.bak newlib-3.3.0/libgloss/v850/read.c
+--- newlib-3.3.0/libgloss/v850/read.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/read.c	2023-01-25 19:59:45.773236000 +0800
+@@ -1,17 +1,20 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
++int
+ _read (int file,
+        char *ptr,
+        int len)
+ {
+   return TRAP0 (SYS_read, file, ptr, len);
+ }
++
+diff -urN newlib-3.3.0/libgloss/v850/sbrk.c.bak newlib-3.3.0/libgloss/v850/sbrk.c
+--- newlib-3.3.0/libgloss/v850/sbrk.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/sbrk.c	2023-01-25 19:59:45.773236000 +0800
+@@ -1,29 +1,32 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-caddr_t
+-_sbrk (int incr)
++extern char heap_start;  /* Defined by the linker script. */
++extern char end;         /* Defined by the linker script. */
++
++#if 0
++#define HEAP_START ((char *)&heap_start)
++#else
++#define HEAP_START ((char *)&end)
++#endif
++
++static char *heap_ptr = NULL;
++
++void *
++_sbrk (int nbytes)
+ {
+-  extern char   heap_start[];		/* Defined by the linker script. */
+-  static char * heap_end = NULL;
+-  char *        prev_heap_end;
+-  char *        sp = (char *) & sp;
+-
+-  if (heap_end == NULL)
+-    heap_end = heap_start;
+-
+-  prev_heap_end = heap_end;
+-
+-  if (heap_end + incr > sp)
+-    {
+-#define MESSAGE "Heap and stack collision\n"
+-      _write (1, MESSAGE, sizeof MESSAGE);
+-      abort ();
+-    }
++  char *base;
++
++  if (heap_ptr == NULL) {
++    heap_ptr = HEAP_START;
++  }
++  base = heap_ptr;
+ 
+-  heap_end += incr;
++  heap_ptr += nbytes;
+ 
+-  return (caddr_t) prev_heap_end;
++  return base;
+ }
++
+diff -urN newlib-3.3.0/libgloss/v850/stat.c.bak newlib-3.3.0/libgloss/v850/stat.c
+--- newlib-3.3.0/libgloss/v850/stat.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/stat.c	2023-01-25 19:59:45.777236000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/time.c.bak newlib-3.3.0/libgloss/v850/time.c
+--- newlib-3.3.0/libgloss/v850/time.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/time.c	2023-01-25 19:59:45.777236000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/times.c.bak newlib-3.3.0/libgloss/v850/times.c
+--- newlib-3.3.0/libgloss/v850/times.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/times.c	2023-01-25 19:59:45.781235000 +0800
+@@ -4,7 +4,7 @@
+ #include "sys/syscall.h"
+ #include "sys/times.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/unlink.c.bak newlib-3.3.0/libgloss/v850/unlink.c
+--- newlib-3.3.0/libgloss/v850/unlink.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/unlink.c	2023-01-25 19:59:45.781235000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/utime.c.bak newlib-3.3.0/libgloss/v850/utime.c
+--- newlib-3.3.0/libgloss/v850/utime.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/utime.c	2023-01-25 19:59:45.785235000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/wait.c.bak newlib-3.3.0/libgloss/v850/wait.c
+--- newlib-3.3.0/libgloss/v850/wait.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/wait.c	2023-01-25 19:59:45.789234000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/libgloss/v850/write.c.bak newlib-3.3.0/libgloss/v850/write.c
+--- newlib-3.3.0/libgloss/v850/write.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/libgloss/v850/write.c	2023-01-25 19:59:45.789234000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/chmod.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/chmod.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/chmod.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/chmod.c	2023-01-25 19:59:45.797234000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/chown.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/chown.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/chown.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/chown.c	2023-01-25 19:59:45.801233000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/close.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/close.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/close.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/close.c	2023-01-25 19:59:45.801233000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/creat.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/creat.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/creat.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/creat.c	2023-01-25 19:59:45.801233000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/execv.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/execv.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/execv.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/execv.c	2023-01-25 19:59:45.809233000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/execve.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/execve.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/execve.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/execve.c	2023-01-25 19:59:45.809233000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/_exit.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/_exit.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/_exit.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/_exit.c	2023-01-25 19:59:45.813232000 +0800
+@@ -1,34 +1,18 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-static void _do_dtors()
++void _exit (int n)
+ {
+-  /* The loop variable is static so that if a destructor calls exit, 
+-     and we return here, we simply continue with the next destructor. */
+-  typedef void (*pfunc) ();
+-  extern pfunc __dtors[];
+-  extern pfunc __dtors_end[];
+-  static pfunc *p = __dtors;
+-  
+-  while (p < __dtors_end)
+-    (*p++) ();
+-}
+-
+-
+-void _exit (n)
+-{
+-  /* Destructors should be done earlier because they need to be done before the
+-     files are closed, but here is better than nowhere (and this balances the
+-     constructors done in crt1.c. */
+-  _do_dtors();
+-
+   TRAP0 (SYS_exit, n, 0, 0);
++  for(;;);
+ }
++
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/fork.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/fork.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/fork.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/fork.c	2023-01-25 19:59:45.813232000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/fstat.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/fstat.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/fstat.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/fstat.c	2023-01-25 19:59:45.817232000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/getpid.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/getpid.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/getpid.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/getpid.c	2023-01-25 19:59:45.817232000 +0800
+@@ -1,15 +1,18 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-_getpid (n)
++int
++_getpid (int n)
+ {
+   return 1;
+ }
++
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/gettime.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/gettime.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/gettime.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/gettime.c	2023-01-25 19:59:45.821232000 +0800
+@@ -4,7 +4,7 @@
+ #include "sys/syscall.h"
+ #include "sys/time.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/isatty.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/isatty.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/isatty.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/isatty.c	2023-01-25 19:59:45.821232000 +0800
+@@ -1,16 +1,18 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-_isatty (fd)
+-     int fd;
++int
++_isatty (int fd)
+ {
+   return 1;
+ }
++
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/kill.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/kill.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/kill.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/kill.c	2023-01-25 19:59:45.825231000 +0800
+@@ -1,18 +1,19 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ #include <reent.h>
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
+-_kill (pid, sig)
+-     pid_t pid;
+-     int sig;
++int
++_kill (pid_t pid,
++       int sig)
+ {
+   return TRAP0 (SYS_exit, 0xdead0000 | sig, 0, 0);
+ }
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/link.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/link.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/link.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/link.c	2023-01-25 19:59:45.825231000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/lseek.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/lseek.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/lseek.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/lseek.c	2023-01-25 19:59:45.829231000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/open.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/open.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/open.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/open.c	2023-01-25 19:59:45.829231000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/pipe.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/pipe.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/pipe.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/pipe.c	2023-01-25 19:59:45.833231000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/read.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/read.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/read.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/read.c	2023-01-25 19:59:45.833231000 +0800
+@@ -1,17 +1,20 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+ #define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
+ 
++int
+ _read (int file,
+        char *ptr,
+        int len)
+ {
+   return TRAP0 (SYS_read, file, ptr, len);
+ }
++
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/rename.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/rename.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/rename.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/rename.c	2023-01-25 19:59:45.837230000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/sbrk.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/sbrk.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/sbrk.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/sbrk.c	2023-01-25 19:59:45.837230000 +0800
+@@ -1,29 +1,32 @@
++
+ #include <_ansi.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-caddr_t
+-_sbrk (int incr)
++extern char heap_start;  /* Defined by the linker script. */
++extern char end;         /* Defined by the linker script. */
++
++#if 0
++#define HEAP_START ((char *)&heap_start)
++#else
++#define HEAP_START ((char *)&end)
++#endif
++
++static char *heap_ptr = NULL;
++
++void *
++_sbrk (int nbytes)
+ {
+-  extern char   heap_start[];	/* Defined by the linker script.  */
+-  static char * heap_end = NULL;
+-  char *        prev_heap_end;
+-  char *        sp = (char *) & sp;
+-
+-  if (heap_end == NULL)
+-    heap_end = heap_start;
+-
+-  prev_heap_end = heap_end;
+-
+-  if (heap_end + incr > sp)
+-    {
+-#define MESSAGE "Heap and stack collision\n"
+-      _write (1, MESSAGE, sizeof MESSAGE);
+-      abort ();
+-    }
++  char *base;
++
++  if (heap_ptr == NULL) {
++    heap_ptr = HEAP_START;
++  }
++  base = heap_ptr;
+ 
+-  heap_end += incr;
++  heap_ptr += nbytes;
+ 
+-  return (caddr_t) prev_heap_end;
++  return base;
+ }
++
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/stat.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/stat.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/stat.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/stat.c	2023-01-25 19:59:45.841230000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/time.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/time.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/time.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/time.c	2023-01-25 19:59:45.845230000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/times.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/times.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/times.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/times.c	2023-01-25 19:59:45.845230000 +0800
+@@ -4,7 +4,7 @@
+ #include "sys/syscall.h"
+ #include "sys/times.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/unlink.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/unlink.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/unlink.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/unlink.c	2023-01-25 19:59:45.849229000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/utime.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/utime.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/utime.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/utime.c	2023-01-25 19:59:45.853229000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/wait.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/wait.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/wait.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/wait.c	2023-01-25 19:59:45.853229000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 
+diff -urN newlib-3.3.0/newlib/libc/sys/sysnecv850/write.c.bak newlib-3.3.0/newlib/libc/sys/sysnecv850/write.c
+--- newlib-3.3.0/newlib/libc/sys/sysnecv850/write.c.bak	2020-01-22 18:05:51.000000000 +0800
++++ newlib-3.3.0/newlib/libc/sys/sysnecv850/write.c	2023-01-25 19:59:45.857228000 +0800
+@@ -3,7 +3,7 @@
+ #include <sys/stat.h>
+ #include "sys/syscall.h"
+ 
+-int errno;
++extern int errno;
+ 
+ int __trap0 (int function, int p1, int p2, int p3);
+ 

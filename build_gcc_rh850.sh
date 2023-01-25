@@ -20,6 +20,7 @@ WINDOWS_HOST="x86_64-w64-mingw32"
 TARGET="v850-elf"
 BASE_PATH="/tmp/work"
 
+PATCH_PATH=$(dirname $(readlink -f "$0"))/patch
 SOURCE_PATH="${BASE_PATH}/source"
 BUILD_LINUX_PATH="${BASE_PATH}/build/linux"
 BUILD_WINDOWS_PATH="${BASE_PATH}/build/win32"
@@ -78,163 +79,13 @@ cd ${SOURCE_PATH}/gcc-${GCC_VERSION}
 ./contrib/download_prerequisites
 
 # do patches
-EXIT_C='
-#include <_ansi.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "sys/syscall.h"
-
-extern int errno;
-
-int __trap0 (int function, int p1, int p2, int p3);
-
-#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
-
-void _exit (int n)
-{
-  TRAP0 (SYS_exit, n, 0, 0);
-  for(;;);
-}
-'
-
-GET_PID_C='
-#include <_ansi.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "sys/syscall.h"
-
-extern int errno;
-
-int __trap0 (int function, int p1, int p2, int p3);
-
-#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
-
-int
-_getpid (int n)
-{
-  return 1;
-}
-'
-
-ISATTY_C='
-#include <_ansi.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "sys/syscall.h"
-
-extern int errno;
-
-int __trap0 (int function, int p1, int p2, int p3);
-
-#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
-
-int
-_isatty (int fd)
-{
-  return 1;
-}
-'
-
-KILL_C='
-#include <_ansi.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "sys/syscall.h"
-#include <reent.h>
-
-extern int errno;
-
-int __trap0 (int function, int p1, int p2, int p3);
-
-#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
-
-int
-_kill (pid_t pid,
-       int sig)
-{
-  return TRAP0 (SYS_exit, 0xdead0000 | sig, 0, 0);
-}
-'
-
-READ_C='
-#include <_ansi.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "sys/syscall.h"
-
-extern int errno;
-
-int __trap0 (int function, int p1, int p2, int p3);
-
-#define TRAP0(f, p1, p2, p3) __trap0(f, (int)(p1), (int)(p2), (int)(p3))
-
-int
-_read (int file,
-       char *ptr,
-       int len)
-{
-  return TRAP0 (SYS_read, file, ptr, len);
-}
-'
-
-SBRK_C='
-#include <_ansi.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "sys/syscall.h"
-
-extern char heap_start;  /* Defined by the linker script. */
-extern char end;         /* Defined by the linker script. */
-
-#if 0
-#define HEAP_START ((char *)&heap_start)
-#else
-#define HEAP_START ((char *)&end)
-#endif
-
-static char *heap_ptr = NULL;
-
-void *
-_sbrk (int nbytes)
-{
-  char *base;
-
-  if (heap_ptr == NULL) {
-    heap_ptr = HEAP_START;
-  }
-  base = heap_ptr;
-
-  heap_ptr += nbytes;
-
-  return base;
-}
-'
-
-echo "${EXIT_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/_exit.c
-# echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/get_pid.c
-echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/getpid.c
-echo "${ISATTY_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/isatty.c
-echo "${KILL_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/kill.c
-echo "${READ_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/read.c
-echo "${SBRK_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/sbrk.c
-
-echo "${EXIT_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/_exit.c
-# echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/get_pid.c
-echo "${GET_PID_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/getpid.c
-echo "${ISATTY_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/isatty.c
-echo "${KILL_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/kill.c
-echo "${READ_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/read.c
-echo "${SBRK_C}" > ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/sbrk.c
-
-for f in `ls ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/libgloss/v850/*.c`
-do
-    sed -i "s/^int errno;/extern int errno;/g" $f
-done
-
-for f in `ls ${SOURCE_PATH}/newlib-${NEWLIB_VERSION}/newlib/libc/sys/sysnecv850/*.c`
-do
-    sed -i "s/^int errno;/extern int errno;/g" $f
-done
+if [ ! -e ${STAGE_PATH}/do_patch ]
+then
+    cd ${SOURCE_PATH}
+    patch -p0 -i ${PATCH_PATH}/gcc.patch
+    patch -p0 -i ${PATCH_PATH}/newlib.patch
+    touch ${STAGE_PATH}/do_patch
+fi
 
 # build linux toolchain
 if [ ! -e ${STAGE_PATH}/build_linux_binutils ]

@@ -1,0 +1,77 @@
+--- gcc-9.3.0/gcc/config/v850/v850.c.bak	2023-01-25 21:59:01.569751049 +0800
++++ gcc-9.3.0/gcc/config/v850/v850.c	2023-01-25 22:00:10.977293855 +0800
+@@ -1636,6 +1636,12 @@
+     F (inc);
+ }
+ 
++static bool
++v850_is_naked_func (void)
++{
++  return (lookup_attribute ("naked", DECL_ATTRIBUTES (current_function_decl)) != NULL_TREE);
++}
++
+ void
+ expand_prologue (void)
+ {
+@@ -1650,6 +1656,9 @@
+   int interrupt_handler = v850_interrupt_function_p (current_function_decl);
+   long reg_saved = 0;
+ 
++  if (v850_is_naked_func ())
++    return;
++
+   actual_fsize = compute_frame_size (size, &reg_saved);
+ 
+   if (flag_stack_usage_info)
+@@ -1832,6 +1841,9 @@
+   int code;
+   int interrupt_handler = v850_interrupt_function_p (current_function_decl);
+ 
++  if (v850_is_naked_func ())
++    return;
++
+   /* Eliminate the initial stack stored by interrupt functions.  */
+   if (interrupt_handler)
+     {
+@@ -2039,6 +2051,32 @@
+   return NULL_TREE;
+ }
+ 
++/* Handle a "naked" attribute; arguments as in
++   struct attribute_spec.handler.  */
++static tree
++v850_handle_naked_attribute (tree * node,
++			     tree   name ATTRIBUTE_UNUSED,
++			     tree   args,
++			     int    flags ATTRIBUTE_UNUSED,
++			     bool * no_add_attrs)
++{
++  gcc_assert (DECL_P (* node));
++  gcc_assert (args == NULL_TREE);
++
++  if (TREE_CODE (* node) != FUNCTION_DECL)
++    {
++      warning (OPT_Wattributes, "naked attribute only applies to functions");
++      * no_add_attrs = true;
++    }
++
++  /* Disable warnings about this function - eg reaching the end without
++     seeing a return statement - because the programmer is doing things
++     that gcc does not know about.  */
++  TREE_NO_WARNING (* node) = 1;
++
++  return NULL_TREE;
++}
++
+ /* Handle a "sda", "tda" or "zda" attribute; arguments as in
+    struct attribute_spec.handler.  */
+ static tree
+@@ -3146,6 +3184,8 @@
+     v850_handle_interrupt_attribute, NULL },
+   { "interrupt",         0, 0, true,  false, false, false,
+     v850_handle_interrupt_attribute, NULL },
++  { "naked",             0, 0, true,  false, false, false,
++    v850_handle_naked_attribute, NULL },
+   { "sda",               0, 0, true,  false, false, false,
+     v850_handle_data_area_attribute, NULL },
+   { "tda",               0, 0, true,  false, false, false,
